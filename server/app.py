@@ -7,10 +7,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import asr
+from . import asr, llm
 from .config import ASR_PRELOAD, STATIC_DIR
 from .files import build_output_path, safe_download_path
-from .schemas import DownloadRequest
+from .schemas import DownloadRequest, LLMConfigRequest, RewriteRequest
 from .tasks import (
     create_task,
     download_url_for_transcription,
@@ -42,6 +42,46 @@ async def index():
 @app.get("/api/asr/status")
 async def asr_status():
     return await asr.get_status()
+
+
+@app.get("/api/ai/config")
+async def get_llm_config():
+    return llm.config_response(llm.resolve_config(require_api_key=False))
+
+
+@app.put("/api/ai/config")
+async def update_llm_config(payload: LLMConfigRequest):
+    try:
+        return llm.save_config(payload.dict())
+    except llm.LLMConfigError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/ai/rewrite")
+async def rewrite_text(payload: RewriteRequest):
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="text 不能为空")
+
+    try:
+        config = llm.resolve_config(require_api_key=True)
+        rewritten = await asyncio.to_thread(
+            llm.rewrite_text,
+            config,
+            text=text,
+            source=payload.source,
+            style=payload.style,
+        )
+    except llm.LLMConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except llm.LLMServiceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {
+        "text": rewritten,
+        "provider": config.provider,
+        "model": config.model,
+    }
 
 
 @app.post("/api/downloads")

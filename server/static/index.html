@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Share Video Transcriber</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260628-apple1" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260628-ai-rewrite3" />
   </head>
   <body>
     <header class="global-nav">
@@ -15,6 +15,57 @@
           <span class="nav-link">Playwright</span>
           <span class="nav-link">ASR</span>
         </nav>
+        <div id="llm-menu" class="model-menu">
+          <button
+            id="llm-config-toggle"
+            class="model-trigger"
+            type="button"
+            aria-expanded="false"
+            aria-controls="llm-config-form"
+          >
+            <span class="model-dot" aria-hidden="true"></span>
+            <span id="llm-config-summary">模型未配置</span>
+          </button>
+
+          <form id="llm-config-form" class="model-popover" novalidate hidden>
+            <div class="popover-head">
+              <div>
+                <h2>模型配置</h2>
+                <p id="llm-config-status">正在读取配置</p>
+              </div>
+              <button id="llm-save" type="submit">保存</button>
+            </div>
+
+            <div class="config-grid">
+              <label>
+                模型厂商
+                <select id="llm-provider" name="provider">
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="aliyun">阿里百炼</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </label>
+              <label>
+                模型名
+                <input id="llm-model" name="model" placeholder="deepseek-chat" />
+              </label>
+              <label>
+                Base URL
+                <input id="llm-base-url" name="base_url" placeholder="https://api.deepseek.com" />
+              </label>
+              <label>
+                超时秒
+                <input id="llm-timeout" name="timeout" type="number" min="1" max="600" value="60" />
+              </label>
+            </div>
+
+            <label>
+              API Key
+              <input id="llm-api-key" name="api_key" type="password" autocomplete="off" placeholder="保存后仅显示脱敏状态" />
+            </label>
+            <p class="config-help">留空会保留服务端已保存的密钥。公开访问时请先用防火墙或反向代理保护本页面。</p>
+          </form>
+        </div>
       </div>
     </header>
 
@@ -58,7 +109,7 @@
                 显示浏览器
               </label>
               <label class="check">
-                <input id="transcribe" name="transcribe" type="checkbox" />
+                <input id="transcribe" name="transcribe" type="checkbox" checked />
                 提取对话
               </label>
             </div>
@@ -77,7 +128,7 @@
           <section id="tasks" class="tasks" aria-live="polite"></section>
           <div id="empty-state" class="empty-state">
             <strong>还没有任务</strong>
-            <p>提交后会在这里显示视频预览、文案、字幕和转写结果。</p>
+            <p>提交后会在这里显示视频预览、文案和转写结果。</p>
           </div>
         </div>
       </section>
@@ -105,6 +156,6 @@
       </article>
     </template>
 
-    <script src="/static/app.js?v=20260628-apple1"></script>
+    <script src="/static/app.js?v=20260628-ai-rewrite3"></script>
   </body>
 </html>
