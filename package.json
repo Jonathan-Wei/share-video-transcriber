@@ -10,7 +10,8 @@
     "download": "node ./src/cli.js",
     "api": "uvicorn server.app:app --host 127.0.0.1 --port 8000",
     "api:server": "uvicorn server.app:app --host 0.0.0.0 --port 8000",
-    "install:browsers": "playwright install chromium"
+    "install:browsers": "playwright install chromium",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "playwright": "^1.44.0"
