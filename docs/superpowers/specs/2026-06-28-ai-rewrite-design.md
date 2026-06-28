@@ -102,7 +102,7 @@ GET /api/ai/config
   "base_url": "https://api.deepseek.com",
   "timeout": 60,
   "api_key_configured": true,
-  "api_key_masked": "sk-****abcd",
+  "api_key_masked": "****abcd",
   "source": "saved"
 }
 ```
@@ -117,7 +117,7 @@ Content-Type: application/json
 ```json
 {
   "provider": "aliyun",
-  "api_key": "sk-xxx",
+  "api_key": "<api-key>",
   "model": "qwen-plus",
   "base_url": "",
   "timeout": 60

@@ -5,8 +5,34 @@ const template = document.querySelector("#task-template");
 const formError = document.querySelector("#form-error");
 const asrStatus = document.querySelector("#asr-status");
 const emptyState = document.querySelector("#empty-state");
+const llmMenu = document.querySelector("#llm-menu");
+const llmConfigForm = document.querySelector("#llm-config-form");
+const llmConfigToggle = document.querySelector("#llm-config-toggle");
+const llmConfigSummary = document.querySelector("#llm-config-summary");
+const llmProvider = document.querySelector("#llm-provider");
+const llmModel = document.querySelector("#llm-model");
+const llmBaseUrl = document.querySelector("#llm-base-url");
+const llmApiKey = document.querySelector("#llm-api-key");
+const llmTimeout = document.querySelector("#llm-timeout");
+const llmConfigStatus = document.querySelector("#llm-config-status");
+const llmSave = document.querySelector("#llm-save");
 const taskNodes = new Map();
 const activeTasks = new Set();
+
+const llmDefaults = {
+  deepseek: {
+    model: "deepseek-chat",
+    base_url: "https://api.deepseek.com",
+  },
+  aliyun: {
+    model: "qwen-plus",
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  },
+  custom: {
+    model: "",
+    base_url: "",
+  },
+};
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -46,7 +72,33 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+llmProvider.addEventListener("change", () => {
+  applyProviderDefaults(llmProvider.value, { onlyEmpty: false });
+});
+
+llmConfigToggle.addEventListener("click", () => {
+  setLlmMenuOpen(llmConfigForm.hidden);
+});
+
+document.addEventListener("click", (event) => {
+  if (!llmMenu.contains(event.target)) {
+    setLlmMenuOpen(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setLlmMenuOpen(false);
+  }
+});
+
+llmConfigForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await saveLlmConfig();
+});
+
 loadAsrStatus();
+loadLlmConfig();
 loadTasks();
 
 async function loadAsrStatus() {
@@ -63,6 +115,103 @@ async function loadAsrStatus() {
     asrStatus.textContent = "ASR 状态未知";
     asrStatus.className = "badge badge-warn";
   }
+}
+
+async function loadLlmConfig() {
+  try {
+    const config = await api("/api/ai/config");
+    llmProvider.value = config.provider || "deepseek";
+    llmModel.value = config.model || "";
+    llmBaseUrl.value = config.base_url || "";
+    llmTimeout.value = config.timeout || 60;
+    llmApiKey.value = "";
+    llmApiKey.placeholder = config.api_key_configured
+      ? `已配置 ${config.api_key_masked}`
+      : "保存后仅显示脱敏状态";
+    llmConfigStatus.textContent = config.api_key_configured
+      ? `当前使用 ${providerLabel(config.provider)} · ${config.model}`
+      : "尚未配置 API Key";
+    llmConfigStatus.className = config.api_key_configured ? "config-status ok" : "config-status warn";
+    updateLlmSummary(config);
+  } catch (error) {
+    llmConfigStatus.textContent = `模型配置读取失败：${error.message}`;
+    llmConfigStatus.className = "config-status warn";
+    updateLlmSummary({ api_key_configured: false, provider: "", model: "" });
+  }
+}
+
+async function saveLlmConfig() {
+  llmSave.disabled = true;
+  llmSave.textContent = "保存中...";
+  llmConfigStatus.textContent = "正在保存模型配置";
+
+  try {
+    const payload = {
+      provider: llmProvider.value,
+      api_key: llmApiKey.value.trim(),
+      model: llmModel.value.trim(),
+      base_url: llmBaseUrl.value.trim(),
+      timeout: Number(llmTimeout.value) || 60,
+    };
+    const config = await api("/api/ai/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    llmProvider.value = config.provider || payload.provider;
+    llmModel.value = config.model || "";
+    llmBaseUrl.value = config.base_url || "";
+    llmTimeout.value = config.timeout || payload.timeout;
+    llmApiKey.value = "";
+    llmApiKey.placeholder = config.api_key_configured
+      ? `已配置 ${config.api_key_masked}`
+      : "保存后仅显示脱敏状态";
+    llmConfigStatus.textContent = `已保存 ${providerLabel(config.provider)} · ${config.model}`;
+    llmConfigStatus.className = "config-status ok";
+    updateLlmSummary(config);
+  } catch (error) {
+    llmConfigStatus.textContent = `保存失败：${error.message}`;
+    llmConfigStatus.className = "config-status warn";
+  } finally {
+    llmSave.disabled = false;
+    llmSave.textContent = "保存";
+  }
+}
+
+function setLlmMenuOpen(open) {
+  llmConfigForm.hidden = !open;
+  llmConfigToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  llmMenu.classList.toggle("open", open);
+}
+
+function updateLlmSummary(config) {
+  const configured = Boolean(config.api_key_configured);
+  const provider = providerLabel(config.provider);
+  llmConfigSummary.textContent = configured
+    ? `${provider} · 已配置`
+    : provider
+      ? `${provider} · 未配置`
+      : "模型未配置";
+  llmConfigToggle.classList.toggle("configured", configured);
+  llmConfigToggle.classList.toggle("unconfigured", !configured);
+}
+
+function applyProviderDefaults(provider, options = {}) {
+  const defaults = llmDefaults[provider] || llmDefaults.deepseek;
+  if (!options.onlyEmpty || !llmModel.value.trim()) {
+    llmModel.value = defaults.model;
+  }
+  if (!options.onlyEmpty || !llmBaseUrl.value.trim()) {
+    llmBaseUrl.value = defaults.base_url;
+  }
+}
+
+function providerLabel(provider) {
+  return {
+    deepseek: "DeepSeek",
+    aliyun: "阿里百炼",
+    custom: "自定义模型",
+  }[provider] || provider;
 }
 
 async function loadTasks() {
@@ -139,15 +288,12 @@ function renderPreview(target, result) {
 
   const metadata = result.metadata || {};
   const videoUrl = metadata.video?.pathUrl || result.outputPathUrl;
-  const coverUrl = metadata.cover?.pathUrl || "";
   const title = displayTitle(metadata);
   const previewKey = [
     videoUrl,
-    coverUrl,
     title,
     metadata.desc,
     metadata.shareCaption,
-    metadata.subtitles?.length || 0,
     metadata.transcript?.textPathUrl || "",
     metadata.transcript?.content?.length || 0,
   ].join("|");
@@ -169,53 +315,19 @@ function renderPreview(target, result) {
     video.src = videoUrl;
     video.controls = true;
     video.preload = "metadata";
-    if (coverUrl) video.poster = coverUrl;
     video.setAttribute("aria-label", title ? `播放视频：${title}` : "播放视频");
     media.append(video);
-  } else if (coverUrl) {
-    const image = document.createElement("img");
-    image.src = coverUrl;
-    image.alt = metadata.title || "视频封面";
-    media.append(image);
   }
 
   const info = document.createElement("div");
   info.className = "media-info";
   info.append(textBlock("标题", title || "未解析到标题", "title-text"));
-  info.append(textBlock("文案", metadata.desc || metadata.shareCaption || "未解析到文案"));
-
-  if (coverUrl) {
-    const cover = document.createElement("img");
-    cover.className = "cover-thumb";
-    cover.src = coverUrl;
-    cover.alt = "封面";
-    info.append(labelWrap("封面", cover));
-  }
-
-  const subtitles = metadata.subtitles || [];
-  if (subtitles.length > 0) {
-    const subtitleWrap = document.createElement("div");
-    subtitleWrap.className = "subtitle-list";
-    const label = document.createElement("span");
-    label.className = "field-label";
-    label.textContent = "字幕";
-    subtitleWrap.append(label);
-
-    subtitles.forEach((subtitle, index) => {
-      const details = document.createElement("details");
-      details.className = "subtitle";
-      if (index === 0) details.open = true;
-      const summary = document.createElement("summary");
-      summary.textContent = subtitle.language || subtitle.format || `字幕 ${index + 1}`;
-      const pre = document.createElement("pre");
-      pre.textContent = subtitle.content || "字幕文件已保存，但无法预览文本内容。";
-      details.append(summary, pre);
-      subtitleWrap.append(details);
-    });
-    info.append(subtitleWrap);
-  } else {
-    info.append(textBlock("字幕", "未解析到字幕内容"));
-  }
+  const captionText = metadata.desc || metadata.shareCaption || "";
+  info.append(
+    captionText
+      ? rewriteTextBlock("文案", captionText, "caption")
+      : textBlock("文案", "未解析到文案")
+  );
 
   const transcript = metadata.transcript;
   if (transcript?.content || transcript?.text) {
@@ -225,12 +337,13 @@ function renderPreview(target, result) {
     const summary = document.createElement("summary");
     summary.textContent = "声音对话";
     const pre = document.createElement("pre");
-    pre.textContent = transcript.content || transcript.text;
-    details.append(summary, pre);
+    const transcriptText = transcript.content || transcript.text;
+    pre.textContent = transcriptText;
+    details.append(summary, pre, renderRewriteTool(transcriptText, "transcript"));
     info.append(details);
   } else if (videoUrl) {
     const button = document.createElement("button");
-    button.className = "secondary";
+    button.className = "secondary transcribe-button";
     button.type = "button";
     button.textContent = "提取声音对话";
     button.addEventListener("click", () => startTranscription(target.closest(".task")?.dataset.taskId));
@@ -265,7 +378,7 @@ async function startTranscription(taskId) {
   if (!taskId) return;
   try {
     const node = taskNodes.get(taskId);
-    const button = node?.querySelector(".secondary");
+    const button = node?.querySelector(".transcribe-button");
     if (button) {
       button.disabled = true;
       button.textContent = "提取中...";
@@ -276,6 +389,102 @@ async function startTranscription(taskId) {
     pollTask(task.id);
   } catch (error) {
     alert(error.message);
+  }
+}
+
+function rewriteTextBlock(labelText, value, source) {
+  const block = textBlock(labelText, value);
+  block.append(renderRewriteTool(value, source));
+  return block;
+}
+
+function renderRewriteTool(text, source) {
+  const wrap = document.createElement("div");
+  wrap.className = "rewrite-tool";
+
+  const actions = document.createElement("div");
+  actions.className = "rewrite-actions";
+
+  const styleSelect = document.createElement("select");
+  styleSelect.className = "rewrite-style";
+  styleSelect.setAttribute("aria-label", "改写风格");
+  [
+    ["social", "社媒文案"],
+    ["summary", "简洁摘要"],
+    ["polished", "正式润色"],
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    styleSelect.append(option);
+  });
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary rewrite-button";
+  button.textContent = "AI 改写";
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "secondary rewrite-copy";
+  copy.textContent = "复制";
+  copy.hidden = true;
+
+  const result = document.createElement("pre");
+  result.className = "rewrite-result";
+  result.hidden = true;
+
+  button.addEventListener("click", async () => {
+    await rewriteSourceText({
+      text,
+      source,
+      style: styleSelect.value,
+      button,
+      result,
+      copy,
+    });
+  });
+  copy.addEventListener("click", async () => {
+    await copyText(result.textContent, copy);
+  });
+
+  actions.append(styleSelect, button, copy);
+  wrap.append(actions, result);
+  return wrap;
+}
+
+async function rewriteSourceText({ text, source, style, button, result, copy }) {
+  button.disabled = true;
+  button.textContent = "改写中...";
+  result.hidden = false;
+  result.textContent = "正在生成改写结果...";
+  copy.hidden = true;
+
+  try {
+    const response = await api("/api/ai/rewrite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, source, style }),
+    });
+    result.textContent = response.text;
+    copy.hidden = false;
+  } catch (error) {
+    result.textContent = `改写失败：${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "AI 改写";
+  }
+}
+
+async function copyText(text, button) {
+  try {
+    await navigator.clipboard.writeText(text || "");
+    button.textContent = "已复制";
+    window.setTimeout(() => {
+      button.textContent = "复制";
+    }, 1400);
+  } catch {
+    alert("复制失败，请手动选择文本复制。");
   }
 }
 
