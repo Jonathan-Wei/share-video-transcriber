@@ -1,0 +1,22 @@
+{
+  "name": "share-video-transcriber",
+  "version": "0.1.0",
+  "description": "A multi-platform shared video downloader and ASR transcription service.",
+  "type": "module",
+  "bin": {
+    "share-video-transcriber": "./src/cli.js"
+  },
+  "scripts": {
+    "download": "node ./src/cli.js",
+    "api": "uvicorn server.app:app --host 127.0.0.1 --port 8000",
+    "api:server": "uvicorn server.app:app --host 0.0.0.0 --port 8000",
+    "install:browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

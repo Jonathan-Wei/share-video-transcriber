@@ -1,0 +1,23 @@
+services:
+  share-video-transcriber:
+    build: .
+    image: share-video-transcriber:latest
+    restart: unless-stopped
+    shm_size: "1gb"
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+    environment:
+      PORT: 8000
+      DOWNLOAD_DIR: /data/downloads
+      ASR_PROVIDER: "${ASR_PROVIDER}"
+      REMOTE_ASR_URL: "${REMOTE_ASR_URL}"
+      REMOTE_ASR_PATH: "${REMOTE_ASR_PATH}"
+      REMOTE_ASR_LANG: "${REMOTE_ASR_LANG}"
+      REMOTE_ASR_TIMEOUT: "${REMOTE_ASR_TIMEOUT}"
+      ASR_MODEL_DIR: /models/faster-whisper-base
+      ASR_PRELOAD: "${ASR_PRELOAD}"
+      PLAYWRIGHT_NO_SANDBOX: "1"
+      PLAYWRIGHT_DISABLE_DEV_SHM: "1"
+    volumes:
+      - ./downloads:/data/downloads
+      - ./models:/models:ro

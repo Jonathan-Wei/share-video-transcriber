@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Share Video Transcriber</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260628-apple1" />
+  </head>
+  <body>
+    <header class="global-nav">
+      <div class="nav-inner">
+        <a class="brand" href="/" aria-label="Share Video Transcriber 首页">Share Video Transcriber</a>
+        <nav aria-label="服务状态">
+          <span class="nav-link">FastAPI</span>
+          <span class="nav-link">Playwright</span>
+          <span class="nav-link">ASR</span>
+        </nav>
+      </div>
+    </header>
+
+    <main class="app">
+      <section class="hero">
+        <div class="workspace hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">多平台视频工作台</p>
+            <h1>下载分享视频，提取对话文本。</h1>
+            <p class="lead">抖音、Bilibili、快手、微信视频号内容可在同一页面完成下载、预览与转写。</p>
+            <div class="status-pills" aria-live="polite">
+              <span class="badge">FastAPI + Playwright</span>
+              <span id="asr-status" class="badge badge-muted">ASR 检查中</span>
+            </div>
+          </div>
+
+          <form id="download-form" class="panel" novalidate>
+            <div class="form-head">
+              <div>
+                <h2>新建任务</h2>
+                <p>粘贴分享链接或分享文案</p>
+              </div>
+              <button id="submit" type="submit">开始下载</button>
+            </div>
+
+            <label for="url">分享内容</label>
+            <textarea id="url" name="url" rows="5" placeholder="https://v.douyin.com/xxxx/" required></textarea>
+            <p id="form-error" class="form-error" role="alert"></p>
+
+            <div class="controls">
+              <label>
+                输出文件名
+                <input id="output-name" name="output_name" placeholder="可选，例如 meeting-clip" />
+              </label>
+              <label>
+                超时 ms
+                <input id="timeout" name="timeout" type="number" min="1000" max="120000" value="30000" />
+              </label>
+              <label class="check">
+                <input id="headful" name="headful" type="checkbox" />
+                显示浏览器
+              </label>
+              <label class="check">
+                <input id="transcribe" name="transcribe" type="checkbox" />
+                提取对话
+              </label>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="task-band">
+        <div class="workspace">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">任务队列</p>
+              <h2>视频、元数据和声音对话</h2>
+            </div>
+          </div>
+          <section id="tasks" class="tasks" aria-live="polite"></section>
+          <div id="empty-state" class="empty-state">
+            <strong>还没有任务</strong>
+            <p>提交后会在这里显示视频预览、文案、字幕和转写结果。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="task-template">
+      <article class="task">
+        <div class="task-head">
+          <div>
+            <strong class="status"></strong>
+            <p class="task-url"></p>
+          </div>
+          <span class="percent"></span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar"></div>
+        </div>
+        <p class="message"></p>
+        <div class="preview"></div>
+        <div class="result-links"></div>
+        <details class="log-details">
+          <summary>日志</summary>
+          <pre class="logs"></pre>
+        </details>
+      </article>
+    </template>
+
+    <script src="/static/app.js?v=20260628-apple1"></script>
+  </body>
+</html>
